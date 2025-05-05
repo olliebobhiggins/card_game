@@ -1,0 +1,166 @@
+import pygame
+import sys
+import random
+import math
+
+# Initialize Pygame
+pygame.init()
+
+# Set up the display
+WIDTH = 800
+HEIGHT = 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Infinite Stickman Adventure")
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+BLUE = (0, 0, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BROWN = (139, 69, 19)
+
+# Game variables
+MOVEMENT_SPEED = 1
+JUMP_FORCE = -10  # Reduced from -15 to -10 for slower jumps
+GRAVITY = 0.4    # Reduced from 0.8 to 0.4 for more floaty jumps
+direction = 0  # 0 = right, 1 = left
+camera_x = 0
+camera_y = 0
+FPS = 350
+
+# Set up font for FPS display
+font = pygame.font.Font(None, 36)
+
+# Terrain generation
+TERRAIN_CHUNK_SIZE = WIDTH * 10  # Generate 10 screens worth of terrain at once
+terrain_chunks = {}
+
+def generate_smooth_terrain(chunk_x):
+    terrain = []
+    # Generate base height
+    base_height = random.randint(100, 150)
+    
+    # Generate smooth terrain using sine waves
+    for x in range(TERRAIN_CHUNK_SIZE):
+        # Combine multiple sine waves for more natural-looking terrain
+        height = base_height
+        height += math.sin(x / 100) * 15  # Larger waves for longer distance
+        height += math.sin(x / 50) * 8    # Medium waves
+        height += math.sin(x / 25) * 4    # Small waves
+        height += random.uniform(-2, 2)    # Small random variations
+        terrain.append(int(height))
+    return terrain
+
+def get_terrain_height(x):
+    chunk_x = x // TERRAIN_CHUNK_SIZE
+    if chunk_x not in terrain_chunks:
+        terrain_chunks[chunk_x] = generate_smooth_terrain(chunk_x)
+    local_x = x % TERRAIN_CHUNK_SIZE
+    return terrain_chunks[chunk_x][local_x]
+
+# Stickman position and physics
+stickman_x = WIDTH // 2
+stickman_y = HEIGHT - 100
+stickman_velocity_y = 0
+is_jumping = False
+
+# Main game loop
+running = True
+clock = pygame.time.Clock()
+
+while running:
+    # Handle events
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and not is_jumping:
+                stickman_velocity_y = JUMP_FORCE
+                is_jumping = True
+
+    # Get keyboard input
+    keys = pygame.key.get_pressed()
+    
+    # Move stickman based on key presses
+    if keys[pygame.K_a]:  # Move left
+        stickman_x -= MOVEMENT_SPEED
+        direction = 1
+    if keys[pygame.K_d]:  # Move right
+        stickman_x += MOVEMENT_SPEED
+        direction = 0
+
+    # Apply gravity
+    stickman_velocity_y += GRAVITY
+    stickman_y += stickman_velocity_y
+
+    # Check for ground collision
+    world_x = stickman_x + camera_x
+    ground_height = get_terrain_height(world_x)
+    if stickman_y > HEIGHT - ground_height - 40:  # 40 is stickman height
+        stickman_y = HEIGHT - ground_height - 40
+        stickman_velocity_y = 0
+        is_jumping = False
+
+    # Update camera position
+    camera_x = stickman_x - WIDTH // 2
+    camera_y = stickman_y - HEIGHT // 2
+
+    # Keep stickman on screen
+    stickman_x = max(0, min(stickman_x, WIDTH))
+    stickman_y = max(0, min(stickman_y, HEIGHT))
+
+    # Clear screen
+    screen.fill(WHITE)
+
+    # Draw terrain with smoother transitions
+    for x in range(0, WIDTH, 2):  # Smaller step size for smoother terrain
+        world_x = x + camera_x
+        terrain_height = get_terrain_height(world_x)
+        pygame.draw.rect(screen, BROWN, 
+                        (x, HEIGHT - terrain_height, 2, terrain_height))
+        # Draw grass on top
+        pygame.draw.line(screen, GREEN, 
+                        (x, HEIGHT - terrain_height), 
+                        (x + 2, HEIGHT - terrain_height), 2)
+
+    # Draw stickman
+    # Head
+    pygame.draw.circle(screen, BLACK, (stickman_x, stickman_y - 20), 10)
+    
+    # Body
+    pygame.draw.line(screen, BLACK, (stickman_x, stickman_y - 10), 
+                    (stickman_x, stickman_y + 20), 2)
+    
+    # Arms (with movement)
+    arm_offset = 5 if is_jumping else 0
+    pygame.draw.line(screen, BLACK, 
+                    (stickman_x - 15, stickman_y + arm_offset), 
+                    (stickman_x + 15, stickman_y - arm_offset), 2)
+    
+    # Legs (with movement)
+    leg_offset = 5 if keys[pygame.K_a] or keys[pygame.K_d] else 0
+    pygame.draw.line(screen, BLACK, 
+                    (stickman_x, stickman_y + 20), 
+                    (stickman_x - 10 + leg_offset, stickman_y + 40), 2)
+    pygame.draw.line(screen, BLACK, 
+                    (stickman_x, stickman_y + 20), 
+                    (stickman_x + 10 - leg_offset, stickman_y + 40), 2)
+
+    # Draw eyes (facing direction)
+    eye_offset = 3 if direction == 0 else -3
+    pygame.draw.circle(screen, RED, (stickman_x + eye_offset, stickman_y - 22), 2)
+
+    # Draw FPS counter
+    fps_text = font.render(f"FPS: {int(clock.get_fps())}", True, BLACK)
+    screen.blit(fps_text, (10, 10))
+
+    # Update display
+    pygame.display.flip()
+    
+    # Control game speed
+    clock.tick(FPS)
+
+# Quit game
+pygame.quit()
+sys.exit() 
