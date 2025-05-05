@@ -47,7 +47,7 @@ def draw():
 
 def on_mouse_down(pos):
     global current_actor
-    if scrooble.collidepoint(pos):
+    if boxcoin.collidepoint(pos):  # Check if the click is on boxcoin
         result = randint(1, 10)
         if result == 1:
             print("You got a Scrooble!")
@@ -76,5 +76,7 @@ def on_mouse_down(pos):
         elif result == 9:
             print("You got Cheat!")
             current_actor = cheat
+    else:
+        print("Click was not on boxcoin.")
 #run
 pz.go()
