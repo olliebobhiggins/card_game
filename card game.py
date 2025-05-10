@@ -32,11 +32,6 @@ vlade.pos = (250, 230)
 cheat.pos = (250, 230)
 boxcoin.pos = (35, 225)
 
-#draw
-def draw():
-    screen.fill("grey")
-    boxcoin.draw
-
 current_actor = None  # Add this at the top of your script
 
 def draw():
